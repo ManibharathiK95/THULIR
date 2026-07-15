@@ -136,6 +136,93 @@ export default function AddData({
   const [incEntryType, setIncEntryType] = useState("Invoice");
   const [incLoading, setIncLoading] = useState(false);
 
+  // Real-time Invoice Suggestion states
+  const [suggestedInvoice, setSuggestedInvoice] = useState("");
+  const [isCalculatingSuggestion, setIsCalculatingSuggestion] = useState(false);
+
+  // Recalculate invoice suggestion when Date, Contractor, or Project changes
+  React.useEffect(() => {
+    if (!incDate || !incContractorId) {
+      setSuggestedInvoice("");
+      setIsCalculatingSuggestion(false);
+      return;
+    }
+
+    // Instantly trigger recalculation state
+    setIsCalculatingSuggestion(true);
+
+    // Get Contractor abbreviation
+    const contractor = contractors.find(c => c.id === incContractorId);
+    let contractorAbbr = "CON";
+    if (contractor) {
+      if (contractor.id === "C001") contractorAbbr = "ALG";
+      else if (contractor.id === "C002") contractorAbbr = "DNB";
+      else if (contractor.id === "C003") contractorAbbr = "NAS";
+      else {
+        const cleaned = contractor.name.replace(/[^a-zA-Z\s]/g, "").trim();
+        const words = cleaned.split(/\s+/);
+        if (words.length >= 3) {
+          contractorAbbr = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+        } else if (words.length === 2) {
+          contractorAbbr = (words[0].substring(0, 2) + words[1][0]).toUpperCase();
+        } else if (words[0]) {
+          contractorAbbr = words[0].substring(0, 3).toUpperCase().padEnd(3, "X");
+        }
+      }
+    }
+
+    // Parse selected Date
+    let yy = "YY";
+    let mm = "MM";
+    let selectedYear = 0;
+    let selectedMonth = 0;
+    try {
+      const selectedDate = parseDate(incDate);
+      if (!isNaN(selectedDate.getTime())) {
+        selectedYear = selectedDate.getFullYear();
+        selectedMonth = selectedDate.getMonth();
+        yy = selectedYear.toString().slice(-2);
+        mm = (selectedMonth + 1).toString().padStart(2, "0");
+      }
+    } catch {
+      // Fallback
+    }
+
+    // Filter income for the contractor and same month/year
+    const matchingInvoices = income.filter(item => {
+      if (item.contractorId !== incContractorId) return false;
+      const desc = item.description || "";
+      if (!desc.toUpperCase().includes("TDQS") && !desc.toUpperCase().includes("INV")) return false;
+      
+      try {
+        const entryDate = parseDate(item.date);
+        return entryDate.getFullYear() === selectedYear && entryDate.getMonth() === selectedMonth;
+      } catch {
+        return false;
+      }
+    });
+
+    let maxSuffix = 0;
+    matchingInvoices.forEach(item => {
+      const suffix = extractSuffix(item.description);
+      if (suffix > maxSuffix) {
+        maxSuffix = suffix;
+      }
+    });
+
+    const nextSuffix = maxSuffix + 1;
+    const xxx = nextSuffix.toString().padStart(3, "0");
+    const suggestion = `TDQS-INV-${yy}${mm}-${contractorAbbr}_${xxx}`;
+
+    // Hold the loading state for exactly 500ms to show the loading spinner next to suggestion
+    const timer = setTimeout(() => {
+      setSuggestedInvoice(suggestion);
+      setIsCalculatingSuggestion(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [incDate, incContractorId, incProjectCode, income, contractors]);
+
   // Real-time Income duplicate checking
   const isIncomeDuplicate = useMemo(() => {
     if (!incDate || !incContractorId || !incProjectCode || !incAmount) return false;
@@ -555,9 +642,35 @@ export default function AddData({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="inc-desc">
-                  Description *
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block" htmlFor="inc-desc">
+                    Description *
+                  </label>
+                  {incDate && incContractorId && (
+                    <div className="flex items-center space-x-1.5 text-[10px] bg-emerald-50/70 px-2 py-0.5 rounded-md border border-emerald-100">
+                      <span className="text-gray-500 font-medium">Invoice Suggestion:</span>
+                      {isCalculatingSuggestion ? (
+                        <span className="flex items-center space-x-1 text-emerald-600 font-bold animate-pulse">
+                          <svg className="animate-spin h-3 w-3 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span className="text-[9px]">Recalculating...</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIncDesc(suggestedInvoice)}
+                          className="inline-flex items-center space-x-1 text-emerald-700 hover:text-emerald-800 font-mono font-bold transition-all cursor-pointer underline decoration-dotted underline-offset-2 focus:outline-none"
+                          title="Click to apply suggested invoice number"
+                        >
+                          <span>{suggestedInvoice}</span>
+                          <span className="text-[9px] text-emerald-500 font-sans font-medium hover:text-emerald-600">(Apply)</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <input
                   id="inc-desc"
                   type="text"
@@ -874,4 +987,16 @@ export default function AddData({
       </div>
     </div>
   );
+}
+
+// Helper to parse sequential suffix numbers from existing invoice descriptions
+function extractSuffix(desc: string): number {
+  if (!desc) return 0;
+  // Match things like _001 or -001 or /001 or just ending with digits
+  const match = desc.match(/[_-]0*(\d+)$/) || desc.match(/\/0*(\d+)$/) || desc.match(/0*(\d+)$/);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (!isNaN(num)) return num;
+  }
+  return 0;
 }
