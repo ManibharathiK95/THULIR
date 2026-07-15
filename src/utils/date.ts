@@ -112,3 +112,17 @@ export function getFYMonthIndex(dateStr: string): number {
 export const FY_MONTH_LABELS = [
   "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"
 ];
+
+/**
+ * Returns the number of days since the given date string till today.
+ */
+export function getDaysSince(dateStr: string): number {
+  const date = parseDate(dateStr);
+  const today = new Date();
+  // Clear time components for pure day difference
+  const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const d2 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffTime = d2.getTime() - d1.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 0;
+}

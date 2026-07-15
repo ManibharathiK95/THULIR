@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { Contractor, Project } from "../types";
-import { formatDateToString } from "../utils/date";
+import { Contractor, Project, IncomeEntry, ExpenseEntry } from "../types";
+import { formatDateToString, parseDate } from "../utils/date";
 import { UserPlus, FolderPlus, DollarSign, Wallet, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 
 interface AddDataProps {
   contractors: Contractor[];
   projects: Project[];
-  onAddContractor: (name: string, accountNumber: string, contactNumber: string) => Promise<boolean>;
+  income: IncomeEntry[];
+  expenses: ExpenseEntry[];
+  onAddContractor: (name: string, accountNumber: string, contactNumber: string, openingBalance?: number) => Promise<boolean>;
   onAddProject: (code: string, name: string, contractorId: string) => Promise<boolean>;
   onAddIncome: (
     date: string,
@@ -15,7 +17,9 @@ interface AddDataProps {
     description: string,
     amount: number,
     currency: string,
-    creditReceived: number
+    creditReceived: number,
+    paymentMethod: string,
+    entryType: string
   ) => Promise<boolean>;
   onAddExpense: (
     date: string,
@@ -25,7 +29,9 @@ interface AddDataProps {
     description: string,
     amount: number,
     currency: string,
-    creditPaid: number
+    creditPaid: number,
+    paymentMethod: string,
+    entryType: string
   ) => Promise<boolean>;
   onResetData: () => Promise<void>;
 }
@@ -33,6 +39,8 @@ interface AddDataProps {
 export default function AddData({
   contractors,
   projects,
+  income,
+  expenses,
   onAddContractor,
   onAddProject,
   onAddIncome,
@@ -51,6 +59,7 @@ export default function AddData({
   const [cName, setCName] = useState("");
   const [cAccount, setCAccount] = useState("");
   const [cContact, setCContact] = useState("");
+  const [cOpeningBalance, setCOpeningBalance] = useState("");
   const [cLoading, setCLoading] = useState(false);
 
   const handleContractorSubmit = async (e: React.FormEvent) => {
@@ -58,12 +67,18 @@ export default function AddData({
     if (!cName.trim()) return showToast("Contractor name is required", "error");
     setCLoading(true);
     try {
-      const success = await onAddContractor(cName.trim(), cAccount.trim(), cContact.trim());
+      const success = await onAddContractor(
+        cName.trim(),
+        cAccount.trim(),
+        cContact.trim(),
+        cOpeningBalance ? Number(cOpeningBalance) : 0
+      );
       if (success) {
         showToast("Contractor added successfully!");
         setCName("");
         setCAccount("");
         setCContact("");
+        setCOpeningBalance("");
       } else {
         showToast("Failed to add contractor.", "error");
       }
@@ -117,7 +132,25 @@ export default function AddData({
   const [incAmount, setIncAmount] = useState("");
   const [incCurrency, setIncCurrency] = useState("AED");
   const [incReceived, setIncReceived] = useState("");
+  const [incPaymentMethod, setIncPaymentMethod] = useState("Cash");
+  const [incEntryType, setIncEntryType] = useState("Invoice");
   const [incLoading, setIncLoading] = useState(false);
+
+  // Real-time Income duplicate checking
+  const isIncomeDuplicate = useMemo(() => {
+    if (!incDate || !incContractorId || !incProjectCode || !incAmount) return false;
+    try {
+      const formattedDate = formatDateToString(new Date(incDate));
+      return income.some(i => 
+        i.date === formattedDate && 
+        i.contractorId === incContractorId && 
+        i.projectCode === incProjectCode && 
+        Number(i.amount) === Number(incAmount)
+      );
+    } catch {
+      return false;
+    }
+  }, [income, incDate, incContractorId, incProjectCode, incAmount]);
 
   // Filter projects for Income form
   const incProjects = useMemo(() => {
@@ -158,7 +191,9 @@ export default function AddData({
         incDesc.trim(),
         Number(incAmount),
         incCurrency,
-        incReceived ? Number(incReceived) : 0
+        incReceived ? Number(incReceived) : 0,
+        incPaymentMethod,
+        incEntryType
       );
 
       if (success) {
@@ -166,6 +201,8 @@ export default function AddData({
         setIncDesc("");
         setIncAmount("");
         setIncReceived("");
+        setIncPaymentMethod("Cash");
+        setIncEntryType("Invoice");
       } else {
         showToast("Failed to record income entry.", "error");
       }
@@ -178,27 +215,38 @@ export default function AddData({
 
   // Form 4: Add Expense Entry
   const [expDate, setExpDate] = useState("");
-  const [expContractorId, setExpContractorId] = useState("");
+  const [expContractorId, setExpContractorId] = useState(""); // empty string means TDQS General
   const [expProjectCode, setExpProjectCode] = useState("");
   const [expVendor, setExpVendor] = useState("");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expCurrency, setExpCurrency] = useState("AED");
   const [expPaid, setExpPaid] = useState("");
+  const [expPaymentMethod, setExpPaymentMethod] = useState("Cash");
+  const [expEntryType, setExpEntryType] = useState("Invoice");
   const [expLoading, setExpLoading] = useState(false);
 
-  // Filter projects for Expense form
+  // Real-time Expense duplicate checking
+  const isExpenseDuplicate = useMemo(() => {
+    if (!expDate || !expProjectCode || !expAmount) return false;
+    try {
+      const formattedDate = formatDateToString(new Date(expDate));
+      return expenses.some(e => 
+        e.date === formattedDate && 
+        (e.contractorId || "") === (expContractorId || "") && 
+        e.projectCode === expProjectCode && 
+        Number(e.amount) === Number(expAmount)
+      );
+    } catch {
+      return false;
+    }
+  }, [expenses, expDate, expContractorId, expProjectCode, expAmount]);
+
+  // Filter projects for Expense form - allow all projects for general expense, or filter by contractor
   const expProjects = useMemo(() => {
-    if (!expContractorId) return [];
+    if (!expContractorId) return projects;
     return projects.filter(p => p.contractorId === expContractorId);
   }, [projects, expContractorId]);
-
-  // Set default selections
-  React.useEffect(() => {
-    if (contractors.length > 0 && !expContractorId) {
-      setExpContractorId(contractors[0].id);
-    }
-  }, [contractors, expContractorId]);
 
   React.useEffect(() => {
     if (expProjects.length > 0) {
@@ -210,7 +258,7 @@ export default function AddData({
 
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!expDate || !expContractorId || !expProjectCode || !expVendor.trim() || !expDesc.trim() || !expAmount) {
+    if (!expDate || !expProjectCode || !expVendor.trim() || !expDesc.trim() || !expAmount) {
       return showToast("Please fill all required expense fields", "error");
     }
     setExpLoading(true);
@@ -220,13 +268,15 @@ export default function AddData({
 
       const success = await onAddExpense(
         sheetDateStr,
-        expContractorId,
+        expContractorId, // will be empty string if TDQS General
         expProjectCode,
         expVendor.trim(),
         expDesc.trim(),
         Number(expAmount),
         expCurrency,
-        expPaid ? Number(expPaid) : 0
+        expPaid ? Number(expPaid) : 0,
+        expPaymentMethod,
+        expEntryType
       );
 
       if (success) {
@@ -235,6 +285,8 @@ export default function AddData({
         setExpDesc("");
         setExpAmount("");
         setExpPaid("");
+        setExpPaymentMethod("Cash");
+        setExpEntryType("Invoice");
       } else {
         showToast("Failed to record expense entry.", "error");
       }
@@ -336,6 +388,21 @@ export default function AddData({
                   placeholder="e.g. +971 55 667 6720"
                   value={cContact}
                   onChange={(e) => setCContact(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="c-opening">
+                  Opening Balance (AED)
+                </label>
+                <input
+                  id="c-opening"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 15000.00"
+                  value={cOpeningBalance}
+                  onChange={(e) => setCOpeningBalance(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -528,7 +595,6 @@ export default function AddData({
                   type="number"
                   step="any"
                   required
-                  min="0"
                   placeholder="e.g. 24167"
                   value={incAmount}
                   onChange={(e) => setIncAmount(e.target.value)}
@@ -544,14 +610,56 @@ export default function AddData({
                   id="inc-rec"
                   type="number"
                   step="any"
-                  min="0"
                   placeholder="Leave 0 if not received yet"
                   value={incReceived}
                   onChange={(e) => setIncReceived(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-emerald-500 outline-none"
                 />
               </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="inc-payment">
+                  Payment Method *
+                </label>
+                <select
+                  id="inc-payment"
+                  value={incPaymentMethod}
+                  onChange={(e) => setIncPaymentMethod(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium cursor-pointer"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="inc-entrytype">
+                  Entry Type *
+                </label>
+                <select
+                  id="inc-entrytype"
+                  value={incEntryType}
+                  onChange={(e) => setIncEntryType(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium cursor-pointer"
+                >
+                  <option value="Invoice">Invoice</option>
+                  <option value="Adjustment">Adjustment</option>
+                  <option value="Deduction">Deduction</option>
+                </select>
+              </div>
             </div>
+
+            {isIncomeDuplicate && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-800 flex items-start space-x-2.5 shadow-3xs animate-pulse">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-extrabold uppercase tracking-wide text-[10px] text-amber-900 block mb-1">Duplicate Entry Warning</span>
+                  An entry with this exact <span className="font-bold">Date, Contractor, Project Code, and Amount</span> already exists. Creating this will result in a double entry.
+                </div>
+              </div>
+            )}
 
             <div className="pt-4 mt-2 border-t border-gray-50 flex justify-end">
               <button
@@ -590,7 +698,7 @@ export default function AddData({
 
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="exp-contractor">
-                  Contractor *
+                  Contractor (Optional)
                 </label>
                 <select
                   id="exp-contractor"
@@ -598,6 +706,7 @@ export default function AddData({
                   onChange={(e) => setExpContractorId(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium cursor-pointer"
                 >
+                  <option value="">TDQS General (No Contractor)</option>
                   {contractors.map(c => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.id})
@@ -685,7 +794,6 @@ export default function AddData({
                   type="number"
                   step="any"
                   required
-                  min="0"
                   placeholder="e.g. 13475"
                   value={expAmount}
                   onChange={(e) => setExpAmount(e.target.value)}
@@ -701,14 +809,56 @@ export default function AddData({
                   id="exp-paid"
                   type="number"
                   step="any"
-                  min="0"
                   placeholder="Leave 0 if not paid yet"
                   value={expPaid}
                   onChange={(e) => setExpPaid(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium focus:ring-1 focus:ring-red-500 outline-none"
                 />
               </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="exp-payment">
+                  Payment Method *
+                </label>
+                <select
+                  id="exp-payment"
+                  value={expPaymentMethod}
+                  onChange={(e) => setExpPaymentMethod(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium cursor-pointer"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1" htmlFor="exp-entrytype">
+                  Entry Type *
+                </label>
+                <select
+                  id="exp-entrytype"
+                  value={expEntryType}
+                  onChange={(e) => setExpEntryType(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-xs rounded-lg p-2 font-medium cursor-pointer"
+                >
+                  <option value="Invoice">Invoice</option>
+                  <option value="Adjustment">Adjustment</option>
+                  <option value="Deduction">Deduction</option>
+                </select>
+              </div>
             </div>
+
+            {isExpenseDuplicate && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-800 flex items-start space-x-2.5 shadow-3xs animate-pulse">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-extrabold uppercase tracking-wide text-[10px] text-amber-900 block mb-1">Duplicate Entry Warning</span>
+                  An expense entry with this exact <span className="font-bold">Date, Contractor, Project Code, and Amount</span> already exists. Creating this will result in a double entry.
+                </div>
+              </div>
+            )}
 
             <div className="pt-4 mt-2 border-t border-gray-50 flex justify-end">
               <button

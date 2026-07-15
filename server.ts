@@ -73,12 +73,77 @@ const DEFAULT_DATA = {
 // Helper to read database
 async function readDb() {
   try {
-    const data = await fs.readFile(DB_PATH, "utf8");
-    return JSON.parse(data);
+    const dataStr = await fs.readFile(DB_PATH, "utf8");
+    const db = JSON.parse(dataStr);
+    let updated = false;
+    if (db.income) {
+      db.income = db.income.map((item: any, idx: number) => {
+        if (!item.id) {
+          item.id = `INC-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`;
+          updated = true;
+        }
+        if (!item.paymentMethod) {
+          item.paymentMethod = "Cash";
+          updated = true;
+        }
+        if (!item.entryType) {
+          item.entryType = "Invoice";
+          updated = true;
+        }
+        return item;
+      });
+    }
+    if (db.expenses) {
+      db.expenses = db.expenses.map((item: any, idx: number) => {
+        if (!item.id) {
+          item.id = `EXP-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`;
+          updated = true;
+        }
+        if (!item.paymentMethod) {
+          item.paymentMethod = "Cash";
+          updated = true;
+        }
+        if (!item.entryType) {
+          item.entryType = "Invoice";
+          updated = true;
+        }
+        return item;
+      });
+    }
+    if (db.contractors) {
+      db.contractors = db.contractors.map((c: any) => {
+        if (c.openingBalance === undefined) {
+          c.openingBalance = 0;
+          updated = true;
+        }
+        return c;
+      });
+    }
+    if (updated) {
+      await writeDb(db);
+    }
+    return db;
   } catch (error) {
     // If file doesn't exist, write default data and return it
-    await fs.writeFile(DB_PATH, JSON.stringify(DEFAULT_DATA, null, 2), "utf8");
-    return DEFAULT_DATA;
+    const db = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    db.income = db.income.map((item: any, idx: number) => ({
+      id: `INC-${idx + 1}`,
+      paymentMethod: "Cash",
+      entryType: "Invoice",
+      ...item
+    }));
+    db.expenses = db.expenses.map((item: any, idx: number) => ({
+      id: `EXP-${idx + 1}`,
+      paymentMethod: "Cash",
+      entryType: "Invoice",
+      ...item
+    }));
+    db.contractors = db.contractors.map((c: any) => ({
+      openingBalance: 0,
+      ...c
+    }));
+    await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+    return db;
   }
 }
 
@@ -155,7 +220,7 @@ async function startServer() {
   // API Route: Add Contractor
   app.post("/api/contractors", async (req, res) => {
     try {
-      const { name, accountNumber, contactNumber } = req.body;
+      const { name, accountNumber, contactNumber, openingBalance } = req.body;
       if (!name) return res.status(400).json({ error: "Contractor name is required" });
 
       const db = await readDb();
@@ -171,7 +236,8 @@ async function startServer() {
         name,
         accountNumber: accountNumber || "",
         contactNumber: contactNumber || "",
-        status: "Active"
+        status: "Active",
+        openingBalance: openingBalance !== undefined ? Number(openingBalance) : 0
       };
 
       db.contractors.push(newContractor);
@@ -239,20 +305,24 @@ async function startServer() {
   // API Route: Add Income Entry
   app.post("/api/income", async (req, res) => {
     try {
-      const { date, contractorId, projectCode, description, amount, currency, creditReceived } = req.body;
-      if (!date || !contractorId || !projectCode || !description || amount === undefined) {
-        return res.status(400).json({ error: "Date, Contractor ID, Project Code, Description and Amount are required" });
+      const { date, contractorId, projectCode, description, amount, currency, creditReceived, paymentMethod, entryType } = req.body;
+      if (!date || !projectCode || !description || amount === undefined) {
+        return res.status(400).json({ error: "Date, Project Code, Description and Amount are required" });
       }
 
       const db = await readDb();
+      const generatedId = `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const newIncome = {
+        id: generatedId,
         date,
-        contractorId,
+        contractorId: contractorId || "",
         projectCode,
         description,
         amount: Number(amount),
         currency: currency || "AED",
-        creditReceived: creditReceived !== undefined && creditReceived !== "" ? Number(creditReceived) : 0
+        creditReceived: creditReceived !== undefined && creditReceived !== "" ? Number(creditReceived) : 0,
+        paymentMethod: paymentMethod || "Cash",
+        entryType: entryType || "Invoice"
       };
 
       db.income.push(newIncome);
@@ -281,21 +351,25 @@ async function startServer() {
   // API Route: Add Expense Entry
   app.post("/api/expenses", async (req, res) => {
     try {
-      const { date, contractorId, projectCode, vendor, description, amount, currency, creditPaid } = req.body;
-      if (!date || !contractorId || !projectCode || !vendor || !description || amount === undefined) {
-        return res.status(400).json({ error: "Date, Contractor ID, Project Code, Vendor, Description and Amount are required" });
+      const { date, contractorId, projectCode, vendor, description, amount, currency, creditPaid, paymentMethod, entryType } = req.body;
+      if (!date || !projectCode || !vendor || !description || amount === undefined) {
+        return res.status(400).json({ error: "Date, Project Code, Vendor, Description and Amount are required" });
       }
 
       const db = await readDb();
+      const generatedId = `EXP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const newExpense = {
+        id: generatedId,
         date,
-        contractorId,
+        contractorId: contractorId || "",
         projectCode,
         vendor,
         description,
         amount: Number(amount),
         currency: currency || "AED",
-        creditPaid: creditPaid !== undefined && creditPaid !== "" ? Number(creditPaid) : 0
+        creditPaid: creditPaid !== undefined && creditPaid !== "" ? Number(creditPaid) : 0,
+        paymentMethod: paymentMethod || "Cash",
+        entryType: entryType || "Invoice"
       };
 
       db.expenses.push(newExpense);
@@ -316,6 +390,169 @@ async function startServer() {
       }
 
       res.json({ success: true, expense: newExpense });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route: Edit Income Entry
+  app.put("/api/income/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { date, contractorId, projectCode, description, amount, currency, creditReceived, paymentMethod, entryType } = req.body;
+      
+      const db = await readDb();
+      const index = db.income.findIndex((item: any) => item.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Income entry not found" });
+      }
+
+      const updatedIncome = {
+        ...db.income[index],
+        date: date || db.income[index].date,
+        contractorId: contractorId !== undefined ? contractorId : db.income[index].contractorId,
+        projectCode: projectCode || db.income[index].projectCode,
+        description: description || db.income[index].description,
+        amount: amount !== undefined ? Number(amount) : db.income[index].amount,
+        currency: currency || db.income[index].currency,
+        creditReceived: creditReceived !== undefined ? Number(creditReceived) : db.income[index].creditReceived,
+        paymentMethod: paymentMethod || db.income[index].paymentMethod || "Cash",
+        entryType: entryType || db.income[index].entryType || "Invoice"
+      };
+
+      db.income[index] = updatedIncome;
+      await writeDb(db);
+
+      // Proxy to Google Sheets if configured
+      const sheetUrl = process.env.GOOGLE_SHEET_WEB_APP_URL || db.settings?.googleSheetUrl || "";
+      if (sheetUrl && sheetUrl.startsWith("http")) {
+        try {
+          await fetch(sheetUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "editIncome", data: updatedIncome })
+          });
+        } catch (e) {
+          console.error("Error writing to remote sheet:", e);
+        }
+      }
+
+      res.json({ success: true, income: updatedIncome });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route: Delete Income Entry
+  app.delete("/api/income/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = await readDb();
+      const index = db.income.findIndex((item: any) => item.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Income entry not found" });
+      }
+
+      db.income.splice(index, 1);
+      await writeDb(db);
+
+      // Proxy to Google Sheets if configured
+      const sheetUrl = process.env.GOOGLE_SHEET_WEB_APP_URL || db.settings?.googleSheetUrl || "";
+      if (sheetUrl && sheetUrl.startsWith("http")) {
+        try {
+          await fetch(sheetUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "deleteIncome", data: { id } })
+          });
+        } catch (e) {
+          console.error("Error writing to remote sheet:", e);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route: Edit Expense Entry
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { date, contractorId, projectCode, vendor, description, amount, currency, creditPaid, paymentMethod, entryType } = req.body;
+      
+      const db = await readDb();
+      const index = db.expenses.findIndex((item: any) => item.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Expense entry not found" });
+      }
+
+      const updatedExpense = {
+        ...db.expenses[index],
+        date: date || db.expenses[index].date,
+        contractorId: contractorId !== undefined ? contractorId : db.expenses[index].contractorId,
+        projectCode: projectCode || db.expenses[index].projectCode,
+        vendor: vendor || db.expenses[index].vendor,
+        description: description || db.expenses[index].description,
+        amount: amount !== undefined ? Number(amount) : db.expenses[index].amount,
+        currency: currency || db.expenses[index].currency,
+        creditPaid: creditPaid !== undefined ? Number(creditPaid) : db.expenses[index].creditPaid,
+        paymentMethod: paymentMethod || db.expenses[index].paymentMethod || "Cash",
+        entryType: entryType || db.expenses[index].entryType || "Invoice"
+      };
+
+      db.expenses[index] = updatedExpense;
+      await writeDb(db);
+
+      // Proxy to Google Sheets if configured
+      const sheetUrl = process.env.GOOGLE_SHEET_WEB_APP_URL || db.settings?.googleSheetUrl || "";
+      if (sheetUrl && sheetUrl.startsWith("http")) {
+        try {
+          await fetch(sheetUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "editExpense", data: updatedExpense })
+          });
+        } catch (e) {
+          console.error("Error writing to remote sheet:", e);
+        }
+      }
+
+      res.json({ success: true, expense: updatedExpense });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route: Delete Expense Entry
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = await readDb();
+      const index = db.expenses.findIndex((item: any) => item.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Expense entry not found" });
+      }
+
+      db.expenses.splice(index, 1);
+      await writeDb(db);
+
+      // Proxy to Google Sheets if configured
+      const sheetUrl = process.env.GOOGLE_SHEET_WEB_APP_URL || db.settings?.googleSheetUrl || "";
+      if (sheetUrl && sheetUrl.startsWith("http")) {
+        try {
+          await fetch(sheetUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "deleteExpense", data: { id } })
+          });
+        } catch (e) {
+          console.error("Error writing to remote sheet:", e);
+        }
+      }
+
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

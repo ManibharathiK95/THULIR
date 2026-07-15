@@ -71,6 +71,21 @@ export default function Dashboard({
     };
   });
 
+  const generalExpenses = filteredExpenses.filter(item => !item.contractorId);
+  const generalExpensesSum = generalExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+  const allRows = [
+    ...contractorRows,
+    ...(generalExpensesSum > 0 ? [{
+      contractor: { id: "GENERAL", name: "TDQS General", accountNumber: "", contactNumber: "", status: "Active" },
+      incomeSum: 0,
+      expenseSum: generalExpensesSum,
+      balance: -generalExpensesSum,
+      isMixed: false,
+      currency: "AED"
+    }] : [])
+  ];
+
   return (
     <div className="space-y-6">
       {/* Financial Year Selector */}
@@ -170,7 +185,7 @@ export default function Dashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 text-gray-600">
-                  {contractorRows.map((row) => (
+                  {allRows.map((row) => (
                     <tr key={row.contractor.id} className="hover:bg-gray-50/50">
                       <td className="py-3 px-2 font-medium text-gray-800">
                         {row.contractor.name}

@@ -35,6 +35,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
 
   // Active Tab State: 
   // "dashboard", "all-expenses", "contractor-[ID]", "add-data", "pdf-export"
@@ -59,6 +60,12 @@ export default function App() {
       }
       const json = await res.json();
       setData(json);
+
+      // Set last synced timestamp
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+      setLastSynced(`${timeStr} on ${dateStr}`);
 
       // If there are unique financial years, make sure selected is valid or default
       // Let's compute available FYs dynamically
@@ -100,12 +107,12 @@ export default function App() {
   }, [data.income, data.expenses]);
 
   // Write handlers mapping to API routes
-  const handleAddContractor = async (name: string, accountNumber: string, contactNumber: string) => {
+  const handleAddContractor = async (name: string, accountNumber: string, contactNumber: string, openingBalance?: number) => {
     try {
       const res = await fetch("/api/contractors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, accountNumber, contactNumber })
+        body: JSON.stringify({ name, accountNumber, contactNumber, openingBalance: openingBalance || 0 })
       });
       if (!res.ok) {
         const errJson = await res.json();
@@ -145,17 +152,66 @@ export default function App() {
     description: string,
     amount: number,
     currency: string,
-    creditReceived: number
+    creditReceived: number,
+    paymentMethod?: string,
+    entryType?: string
   ) => {
     try {
       const res = await fetch("/api/income", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, contractorId, projectCode, description, amount, currency, creditReceived })
+        body: JSON.stringify({ date, contractorId, projectCode, description, amount, currency, creditReceived, paymentMethod, entryType })
       });
       if (!res.ok) {
         const errJson = await res.json();
         throw new Error(errJson.error || "Failed to record income entry");
+      }
+      await fetchAllData(true);
+      return true;
+    } catch (err: any) {
+      alert(err.message);
+      return false;
+    }
+  };
+
+  const handleEditIncome = async (
+    id: string,
+    date: string,
+    contractorId: string,
+    projectCode: string,
+    description: string,
+    amount: number,
+    currency: string,
+    creditReceived: number,
+    paymentMethod?: string,
+    entryType?: string
+  ) => {
+    try {
+      const res = await fetch(`/api/income/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, contractorId, projectCode, description, amount, currency, creditReceived, paymentMethod, entryType })
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Failed to update income entry");
+      }
+      await fetchAllData(true);
+      return true;
+    } catch (err: any) {
+      alert(err.message);
+      return false;
+    }
+  };
+
+  const handleDeleteIncome = async (id: string) => {
+    try {
+      const res = await fetch(`/api/income/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Failed to delete income entry");
       }
       await fetchAllData(true);
       return true;
@@ -173,17 +229,67 @@ export default function App() {
     description: string,
     amount: number,
     currency: string,
-    creditPaid: number
+    creditPaid: number,
+    paymentMethod?: string,
+    entryType?: string
   ) => {
     try {
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, contractorId, projectCode, vendor, description, amount, currency, creditPaid })
+        body: JSON.stringify({ date, contractorId, projectCode, vendor, description, amount, currency, creditPaid, paymentMethod, entryType })
       });
       if (!res.ok) {
         const errJson = await res.json();
         throw new Error(errJson.error || "Failed to record expense entry");
+      }
+      await fetchAllData(true);
+      return true;
+    } catch (err: any) {
+      alert(err.message);
+      return false;
+    }
+  };
+
+  const handleEditExpense = async (
+    id: string,
+    date: string,
+    contractorId: string,
+    projectCode: string,
+    vendor: string,
+    description: string,
+    amount: number,
+    currency: string,
+    creditPaid: number,
+    paymentMethod?: string,
+    entryType?: string
+  ) => {
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, contractorId, projectCode, vendor, description, amount, currency, creditPaid, paymentMethod, entryType })
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Failed to update expense entry");
+      }
+      await fetchAllData(true);
+      return true;
+    } catch (err: any) {
+      alert(err.message);
+      return false;
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Failed to delete expense entry");
       }
       await fetchAllData(true);
       return true;
@@ -272,6 +378,12 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-3">
+            {lastSynced && (
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider hidden sm:inline-block">
+                Last synced: {lastSynced}
+              </span>
+            )}
+
             {/* Google Sheets Live Sync Indicator & Config Button */}
             <button
               onClick={() => setShowSettingsModal(true)}
@@ -372,6 +484,8 @@ export default function App() {
                     contractors={data.contractors}
                     projects={data.projects}
                     expenses={data.expenses}
+                    onEditExpense={handleEditExpense}
+                    onDeleteExpense={handleDeleteExpense}
                   />
                 )}
 
@@ -388,6 +502,10 @@ export default function App() {
                       expenses={data.expenses}
                       availableFYs={availableFYs}
                       selectedFY={selectedFY}
+                      onEditIncome={handleEditIncome}
+                      onDeleteIncome={handleDeleteIncome}
+                      onEditExpense={handleEditExpense}
+                      onDeleteExpense={handleDeleteExpense}
                     />
                   );
                 })()}
@@ -397,6 +515,8 @@ export default function App() {
                   <AddData
                     contractors={data.contractors}
                     projects={data.projects}
+                    income={data.income}
+                    expenses={data.expenses}
                     onAddContractor={handleAddContractor}
                     onAddProject={handleAddProject}
                     onAddIncome={handleAddIncome}

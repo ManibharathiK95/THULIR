@@ -52,6 +52,14 @@ function doPost(e) {
       return handleAddIncome(data);
     } else if (action === "addExpense") {
       return handleAddExpense(data);
+    } else if (action === "editIncome") {
+      return handleEditIncome(data);
+    } else if (action === "deleteIncome") {
+      return handleDeleteIncome(data);
+    } else if (action === "editExpense") {
+      return handleEditExpense(data);
+    } else if (action === "deleteExpense") {
+      return handleDeleteExpense(data);
     }
     
     return ContentService.createTextOutput(JSON.stringify({ error: "Invalid action" }))
@@ -113,7 +121,7 @@ function getSheetDataAsObjects(sheet) {
 function handleAddContractor(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Contractors") || ss.insertSheet("Contractors");
-  sheet.appendRow([data.id, data.name, data.accountNumber || "", data.contactNumber || "", data.status || "Active"]);
+  sheet.appendRow([data.id, data.name, data.accountNumber || "", data.contactNumber || "", data.status || "Active", Number(data.openingBalance || 0)]);
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -127,14 +135,136 @@ function handleAddProject(data) {
 function handleAddIncome(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Income") || ss.insertSheet("Income");
-  sheet.appendRow([data.date, data.contractorId, data.projectCode, data.description, Number(data.amount), data.currency || "AED", data.creditReceived || ""]);
+  sheet.appendRow([
+    data.date, 
+    data.contractorId || "", 
+    data.projectCode, 
+    data.description, 
+    Number(data.amount), 
+    data.currency || "AED", 
+    data.creditReceived || "",
+    data.paymentMethod || "Cash",
+    data.entryType || "Invoice",
+    data.id || ""
+  ]);
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleAddExpense(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Expenses") || ss.insertSheet("Expenses");
-  sheet.appendRow([data.date, data.contractorId, data.projectCode, data.vendor, data.description, Number(data.amount), data.currency || "AED", data.creditPaid || ""]);
+  sheet.appendRow([
+    data.date, 
+    data.contractorId || "", 
+    data.projectCode, 
+    data.vendor, 
+    data.description, 
+    Number(data.amount), 
+    data.currency || "AED", 
+    data.creditPaid || "",
+    data.paymentMethod || "Cash",
+    data.entryType || "Invoice",
+    data.id || ""
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function findRowIndexById(sheet, id) {
+  if (!sheet) return -1;
+  var range = sheet.getDataRange();
+  var values = range.getValues();
+  if (values.length <= 1) return -1;
+  
+  var headers = values[0].map(function(h) { return toCamelCase(h.toString().trim()); });
+  var idColIdx = headers.indexOf("id");
+  if (idColIdx === -1) {
+    idColIdx = headers.length - 1;
+  }
+  
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][idColIdx].toString() === id.toString()) {
+      return i + 1;
+    }
+  }
+  return -1;
+}
+
+function handleEditIncome(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Income");
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ error: "Income sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+  
+  var rowIdx = findRowIndexById(sheet, data.id);
+  if (rowIdx === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Entry not found" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  sheet.getRange(rowIdx, 1, 1, 10).setValues([[
+    data.date,
+    data.contractorId || "",
+    data.projectCode,
+    data.description,
+    Number(data.amount),
+    data.currency || "AED",
+    data.creditReceived !== undefined && data.creditReceived !== "" ? Number(data.creditReceived) : 0,
+    data.paymentMethod || "Cash",
+    data.entryType || "Invoice",
+    data.id
+  ]]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleDeleteIncome(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Income");
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ error: "Income sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+  
+  var rowIdx = findRowIndexById(sheet, data.id);
+  if (rowIdx === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Entry not found" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  sheet.deleteRow(rowIdx);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleEditExpense(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Expenses");
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ error: "Expenses sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+  
+  var rowIdx = findRowIndexById(sheet, data.id);
+  if (rowIdx === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Entry not found" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  sheet.getRange(rowIdx, 1, 1, 11).setValues([[
+    data.date,
+    data.contractorId || "",
+    data.projectCode,
+    data.vendor,
+    data.description,
+    Number(data.amount),
+    data.currency || "AED",
+    data.creditPaid !== undefined && data.creditPaid !== "" ? Number(data.creditPaid) : 0,
+    data.paymentMethod || "Cash",
+    data.entryType || "Invoice",
+    data.id
+  ]]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleDeleteExpense(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Expenses");
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ error: "Expenses sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+  
+  var rowIdx = findRowIndexById(sheet, data.id);
+  if (rowIdx === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Entry not found" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  sheet.deleteRow(rowIdx);
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -143,6 +273,9 @@ function toCamelCase(str) {
   if (str === "Project Code") return "projectCode";
   if (str === "Credit Received") return "creditReceived";
   if (str === "Credit Paid") return "creditPaid";
+  if (str === "Opening Balance (AED)") return "openingBalance";
+  if (str === "Payment Method") return "paymentMethod";
+  if (str === "Entry Type") return "entryType";
   return str.replace(/(?:^\\w|[A-Z]|\\b\\w)/g, function(word, index) {
     return index === 0 ? word.toLowerCase() : word.toUpperCase();
   }).replace(/\\s+/g, '');
