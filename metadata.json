@@ -1,0 +1,6 @@
+{
+  "name": "TDQS Financial Tracker",
+  "description": "Cloud-Based Financial Tracking App for Thulir Design and QS Services. Track contractor invoices (income) and payments to vendors (expenses) with auto-calculated running balances, summaries, charts, and PDF statement export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

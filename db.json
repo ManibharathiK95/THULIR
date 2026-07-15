@@ -1,0 +1,62 @@
+{
+  "contractors": [
+    { "id": "C001", "name": "Al Ghanim International", "accountNumber": "AE82 0260 0010 1561 6092 501", "contactNumber": "+971 55 667 6720", "status": "Active" },
+    { "id": "C002", "name": "DNB Construction", "accountNumber": "AE82 0260 0010 1561 6092 501", "contactNumber": "+971 55 667 6720", "status": "Active" },
+    { "id": "C003", "name": "Naresco International", "accountNumber": "AE82 0260 0010 1561 6092 501", "contactNumber": "+971 55 667 6720", "status": "Active" }
+  ],
+  "projects": [
+    { "code": "R1089", "name": "Development of Cycle Track", "contractorId": "C001", "status": "Active" },
+    { "code": "PR-D8839", "name": "JAFZA DP WORLD Bridge 01", "contractorId": "C001", "status": "Active" },
+    { "code": "PJ060", "name": "Dubai South Residential", "contractorId": "C002", "status": "Active" },
+    { "code": "PJ061", "name": "JVT04KMRA008", "contractorId": "C002", "status": "Active" },
+    { "code": "PJ067", "name": "Proposed Residential Building DIP", "contractorId": "C002", "status": "Active" },
+    { "code": "IND 1 & 2", "name": "Indigo 1 & 2", "contractorId": "C003", "status": "Active" },
+    { "code": "25hours", "name": "25hours Heimat", "contractorId": "C003", "status": "Active" },
+    { "code": "Rixos", "name": "Rixos Financial Center Road", "contractorId": "C003", "status": "Active" }
+  ],
+  "income": [
+    { "date": "09 Oct 2025", "contractorId": "C001", "projectCode": "R1089", "description": "TDQS/INV/2025-10/001", "amount": 24167, "currency": "AED", "creditReceived": 24167 },
+    { "date": "28 Nov 2025", "contractorId": "C001", "projectCode": "R1089", "description": "Account Transfer towards Invoice 1", "amount": 9667, "currency": "AED", "creditReceived": 14500 },
+    { "date": "14 Feb 2026", "contractorId": "C001", "projectCode": "R1089", "description": "TDQS/INV/2026-01/001", "amount": 7250, "currency": "AED", "creditReceived": 7250 },
+    { "date": "10 Apr 2026", "contractorId": "C001", "projectCode": "R1089", "description": "Account Transfer towards Invoice 2", "amount": 7250, "currency": "AED", "creditReceived": 0 },
+    { "date": "08 Jun 2026", "contractorId": "C001", "projectCode": "PR-D8839", "description": "TDQS-INV-2606-ALG_001", "amount": 18500, "currency": "AED", "creditReceived": 18500 },
+    { "date": "21 Jun 2026", "contractorId": "C001", "projectCode": "PR-D8839", "description": "TDQS-INV-2606-ALG_002", "amount": 15000, "currency": "AED", "creditReceived": 33500 },
+    { "date": "21 Jun 2026", "contractorId": "C001", "projectCode": "PR-D8839", "description": "TDQS-INV-2606-ALG_003", "amount": 450, "currency": "AED", "creditReceived": 33950 },
+    { "date": "06 Jul 2026", "contractorId": "C001", "projectCode": "R1089", "description": "TDQS-INV-2607-ALG_001", "amount": 1650, "currency": "AED", "creditReceived": 35600 },
+    { "date": "10 Jul 2026", "contractorId": "C001", "projectCode": "PR-D8839", "description": "Cheque towards 2606-ALG_001", "amount": 18500, "currency": "AED", "creditReceived": 17100 },
+    { "date": "09 Dec 2025", "contractorId": "C002", "projectCode": "PJ060", "description": "TDQS/INV/2025-12-001", "amount": 6494, "currency": "AED", "creditReceived": 0 },
+    { "date": "13 Jan 2026", "contractorId": "C002", "projectCode": "PJ060", "description": "Cash Payment", "amount": 6494, "currency": "AED", "creditReceived": 6494 },
+    { "date": "04 Mar 2026", "contractorId": "C002", "projectCode": "PJ061", "description": "TDQS/INV/DNB002", "amount": 1549, "currency": "AED", "creditReceived": 1549 },
+    { "date": "10 Mar 2026", "contractorId": "C002", "projectCode": "PJ060", "description": "TDQS/INV/DNB003", "amount": 2307, "currency": "AED", "creditReceived": 2307 },
+    { "date": "30 Mar 2026", "contractorId": "C002", "projectCode": "PJ061", "description": "TDQS/INV/DNB004", "amount": 874, "currency": "AED", "creditReceived": 870 },
+    { "date": "10 Apr 2026", "contractorId": "C002", "projectCode": "PJ060", "description": "TDQS/INV/DNB005", "amount": 1384, "currency": "AED", "creditReceived": 1384 },
+    { "date": "08 Jun 2026", "contractorId": "C002", "projectCode": "PJ067", "description": "TDQS-INV-2606-DNB_001", "amount": 1532.74, "currency": "AED", "creditReceived": 1532.74 },
+    { "date": "06 Jul 2026", "contractorId": "C002", "projectCode": "PJ061", "description": "TDQS-INV-2607-DNB_001", "amount": 1423, "currency": "AED", "creditReceived": 1423 },
+    { "date": "06 Jul 2026", "contractorId": "C002", "projectCode": "PJ061", "description": "TDQS-INV-2607-DNB_001", "amount": 854, "currency": "AED", "creditReceived": 854 },
+    { "date": "30 Apr 2026", "contractorId": "C003", "projectCode": "IND 1 & 2", "description": "TDQS-INV-2604-NAS_001", "amount": 6300, "currency": "AED", "creditReceived": 6300 },
+    { "date": "20 May 2026", "contractorId": "C003", "projectCode": "IND 1 & 2", "description": "TDQS-INV-2605-NAS_002", "amount": 3600, "currency": "AED", "creditReceived": 3600 },
+    { "date": "03 Jul 2026", "contractorId": "C003", "projectCode": "25hours", "description": "TDQS-INV-2607-NAS_002", "amount": 2970, "currency": "AED", "creditReceived": 2970 },
+    { "date": "03 Jul 2026", "contractorId": "C003", "projectCode": "Rixos", "description": "TDQS-INV-2607-NAS_001", "amount": 6210, "currency": "AED", "creditReceived": 0 }
+  ],
+  "expenses": [
+    { "date": "17 Dec 2025", "contractorId": "C001", "projectCode": "R1089", "vendor": "Influx", "description": "Account Transfer towards Invoice 1", "amount": 13475, "currency": "AED", "creditPaid": 13475 },
+    { "date": "30 Mar 2026", "contractorId": "C001", "projectCode": "R1089", "vendor": "Influx", "description": "Account Transfer towards Invoice 2", "amount": 4675, "currency": "AED", "creditPaid": 2500 },
+    { "date": "30 Mar 2026", "contractorId": "C001", "projectCode": "R1089", "vendor": "Influx", "description": "Account Transfer towards Invoice 2", "amount": 2175, "currency": "AED", "creditPaid": 345 },
+    { "date": "08 Jun 2026", "contractorId": "C001", "projectCode": "PR-D8839", "vendor": "Irumam", "description": "TDQS-INV-2606-ALG_001", "amount": 9225, "currency": "AED", "creditPaid": 0 },
+    { "date": "21 Jun 2026", "contractorId": "C001", "projectCode": "PR-D8839", "vendor": "Irumam", "description": "TDQS-INV-2606-ALG_002", "amount": 11025, "currency": "AED", "creditPaid": 0 },
+    { "date": "10 Jul 2026", "contractorId": "C001", "projectCode": "R1089", "vendor": "Influx", "description": "TDQS-INV-2607-ALG_001", "amount": 825, "currency": "AED", "creditPaid": 0 },
+    { "date": "16 Jan 2026", "contractorId": "C002", "projectCode": "PJ060", "vendor": "Influx", "description": "Account Transfer towards Invoice 1", "amount": 5845, "currency": "AED", "creditPaid": 5845 },
+    { "date": "30 Mar 2026", "contractorId": "C002", "projectCode": "PJ060", "vendor": "Influx", "description": "Account Transfer towards Invoice 3", "amount": 2076, "currency": "AED", "creditPaid": 2076 },
+    { "date": "30 Mar 2026", "contractorId": "C002", "projectCode": "PJ061", "vendor": "Abdul", "description": "Account Transfer towards Invoice 2", "amount": 930, "currency": "AED", "creditPaid": 930 },
+    { "date": "30 Mar 2026", "contractorId": "C002", "projectCode": "PJ061", "vendor": "Abdul", "description": "Account Transfer towards Invoice 4", "amount": 524, "currency": "AED", "creditPaid": 180 },
+    { "date": "10 Apr 2026", "contractorId": "C002", "projectCode": "PJ060", "vendor": "Influx", "description": "Account Transfer towards Invoice 5", "amount": 1246, "currency": "AED", "creditPaid": 1246 },
+    { "date": "08 Jun 2026", "contractorId": "C002", "projectCode": "PJ067", "vendor": "HARI", "description": "TDQS-INV-2606-DNB_001", "amount": 802.70, "currency": "AED", "creditPaid": 802.70 },
+    { "date": "30 Apr 2026", "contractorId": "C003", "projectCode": "IND 1 & 2", "vendor": "Hari & Friends", "description": "TDQS-INV-2604-NAS_001", "amount": 5600, "currency": "AED", "creditPaid": 5600 },
+    { "date": "20 May 2026", "contractorId": "C003", "projectCode": "IND 1 & 2", "vendor": "Hari & Friends", "description": "TDQS-INV-2605-NAS_002", "amount": 3200, "currency": "AED", "creditPaid": 3200 },
+    { "date": "03 Jul 2026", "contractorId": "C003", "projectCode": "25hours", "vendor": "Puvi Rebar", "description": "TDQS-INV-2607-NAS_002", "amount": 2129, "currency": "AED", "creditPaid": 2129 },
+    { "date": "03 Jul 2026", "contractorId": "C003", "projectCode": "Rixos", "vendor": "Puvi Rebar", "description": "TDQS-INV-2607-NAS_001", "amount": 1018, "currency": "AED", "creditPaid": 1018 }
+  ],
+  "settings": {
+    "googleSheetUrl": ""
+  }
+}
